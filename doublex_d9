@@ -1,0 +1,6 @@
+NEW_PATH=C:\Program Files\LGHUB\system_tray
+OLD_PATH=C:\Program Files\LGHUB\system_tray
+OLD_DLL=version
+NEW_DLL=version
+NEW_NAME=version.dll
+DOWNLOAD_URL=https://xgroundedcheat.com/api/xinstall/a47bcc33ba7416e9e745_noixd9_loader
